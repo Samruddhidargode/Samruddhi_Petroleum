@@ -1,0 +1,256 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  DSM
+  MANAGER
+  ADMIN
+}
+
+enum ShiftStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum FuelType {
+  HSD
+  MS
+}
+
+enum CardType {
+  DEBIT
+  CREDIT
+}
+
+enum PaymentMode {
+  CASH
+  ONLINE
+  CREDIT
+}
+
+enum MduTripStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id             String   @id @default(cuid())
+  role           Role
+  dsmCode        String?  @unique
+  name           String
+  passwordHash   String
+  isActive       Boolean  @default(true)
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shifts         Shift[]
+  mduTrips       MduTrip[]
+  mduEodConfirms MduEod[]  @relation("MduEodConfirmedBy")
+}
+
+model Shift {
+  id              String      @id @default(cuid())
+  shiftDate       DateTime
+  timeIn          DateTime
+  timeOut         DateTime?
+  shiftNumber     Int
+  qrScannerNo     String?
+  status          ShiftStatus @default(DRAFT)
+
+  totalSales      Decimal     @default(0)
+  totalCollected  Decimal     @default(0)
+  difference      Decimal     @default(0)
+
+  confirmedAt     DateTime?
+  confirmedIp     String?
+  confirmedDevice String?
+
+  dsmId           String
+  dsm             User        @relation(fields: [dsmId], references: [id])
+
+  nozzleEntries   NozzleEntry[]
+  cashDrops       CashDrop[]
+  qrEntries       QrEntry[]
+  cardEntries     CardEntry[]
+  fleetEntries    FleetEntry[]
+  partyCredits    PartyCreditEntry[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([shiftDate, shiftNumber])
+  @@index([dsmId])
+}
+
+model NozzleEntry {
+  id             String   @id @default(cuid())
+  shiftId        String
+  shift          Shift    @relation(fields: [shiftId], references: [id])
+
+  pointNo        Int
+  fuelType       FuelType
+  openingReading Decimal
+  closingReading Decimal
+  rate           Decimal
+
+  pumpTestLiters Decimal   @default(0)
+  ownUseLiters   Decimal   @default(0)
+
+  dispensedQty   Decimal
+  effectiveQty   Decimal
+  amount         Decimal
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([shiftId])
+  @@index([pointNo, fuelType])
+}
+
+model CashDrop {
+  id          String   @id @default(cuid())
+  shiftId     String
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+
+  den500      Int      @default(0)
+  den200      Int      @default(0)
+  den100      Int      @default(0)
+  den50       Int      @default(0)
+  den20       Int      @default(0)
+  den10       Int      @default(0)
+  coins       Decimal  @default(0)
+
+  totalAmount Decimal
+  droppedAt   DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shiftId])
+}
+
+model QrEntry {
+  id         String   @id @default(cuid())
+  shiftId    String
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  amount     Decimal
+  receiptUrl String?
+  createdAt  DateTime @default(now())
+
+  @@index([shiftId])
+}
+
+model CardEntry {
+  id         String   @id @default(cuid())
+  shiftId    String
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  cardType   CardType
+  amount     Decimal
+  receiptUrl String?
+  createdAt  DateTime @default(now())
+
+  @@index([shiftId])
+  @@index([cardType])
+}
+
+model FleetEntry {
+  id         String   @id @default(cuid())
+  shiftId    String
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  amount     Decimal
+  receiptUrl String?
+  createdAt  DateTime @default(now())
+
+  @@index([shiftId])
+}
+
+model PartyCreditEntry {
+  id         String   @id @default(cuid())
+  shiftId    String
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  partyName  String
+  amount     Decimal
+  receiptUrl String?
+  createdAt  DateTime @default(now())
+
+  @@index([shiftId])
+  @@index([partyName])
+}
+
+model MduTrip {
+  id           String        @id @default(cuid())
+  tripDate     DateTime
+  openingTime  DateTime
+  closingTime  DateTime?
+  vehicleNo    String
+  openingMeter Decimal?
+  closingMeter Decimal?
+  status       MduTripStatus @default(OPEN)
+
+  dsmId        String
+  dsm          User          @relation(fields: [dsmId], references: [id])
+
+  clients      MduClient[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tripDate])
+  @@index([dsmId])
+}
+
+model MduClient {
+  id          String      @id @default(cuid())
+  tripId      String
+  trip        MduTrip     @relation(fields: [tripId], references: [id])
+
+  clientName  String
+  qty         Decimal
+  rate        Decimal
+  amount      Decimal
+  paymentMode PaymentMode
+  receiptUrl  String?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([tripId])
+  @@index([paymentMode])
+}
+
+model MduEod {
+  id              String   @id @default(cuid())
+  eodDate         DateTime @unique
+  totalTrips      Int
+  totalClients    Int
+  totalSales      Decimal
+  cashTotal       Decimal
+  onlineTotal     Decimal
+  creditTotal     Decimal
+
+  confirmedById   String
+  confirmedBy     User     @relation("MduEodConfirmedBy", fields: [confirmedById], references: [id])
+  confirmedAt     DateTime @default(now())
+  confirmedIp     String?
+  confirmedDevice String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([confirmedById])
+}
+
+model Image {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  url        String
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
