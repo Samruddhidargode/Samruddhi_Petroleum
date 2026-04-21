@@ -252,6 +252,18 @@ export default function NozzlePage() {
     setPoints((prev) => [...prev, makePoint(nextNo)]);
   }
 
+  function deletePoint(pointId) {
+    if (points.length === 1) {
+      setMessage("You must have at least one point.");
+      return;
+    }
+    const confirmed = window.confirm("Delete this point? This action cannot be undone.");
+    if (confirmed) {
+      setPoints((prev) => prev.filter((p) => p.id !== pointId));
+      setMessage("Point deleted successfully");
+    }
+  }
+
   function pointHasAnyData(point) {
     return FUEL_TYPES.some((fuel) => {
       const row = point.fuels[fuel];
@@ -360,14 +372,14 @@ export default function NozzlePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-4xl px-4 pb-10 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-slate-600">Shift {shiftNumber} | Running Sales: ₹ {formatNumber(runningSales)}</div>
+        <div className="text-sm font-medium text-slate-600">Shift {shiftNumber} | Running Sales: ₹ {formatNumber(runningSales)}</div>
         <button className="button-outline" onClick={addPoint}>+ Add Point</button>
       </div>
 
       {message && (
-        <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className={`rounded-lg px-4 py-3 text-sm ${message.includes("deleted") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
           {message}
         </div>
       )}
@@ -382,13 +394,21 @@ export default function NozzlePage() {
 
         return (
           <div key={point.id} className="card">
-            <div className="mb-3 flex items-center gap-3">
-              <span className="text-sm font-semibold text-slate-700">POINT NO:</span>
-              <select className="input w-28" value={point.pointNo} onChange={(e) => handlePointNoChange(point.id, e.target.value)}>
-                {[1, 2, 3, 4].map((num) => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-slate-700">POINT NO:</span>
+                <select className="input w-28" value={point.pointNo} onChange={(e) => handlePointNoChange(point.id, e.target.value)}>
+                  {[1, 2, 3, 4].map((num) => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
+                </select>
+              </div>
+              <button 
+                onClick={() => deletePoint(point.id)}
+                className="button-outline text-red-600 border-red-200 hover:bg-red-50"
+              >
+                🗑️ Delete Point
+              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -497,16 +517,16 @@ export default function NozzlePage() {
         Total Sales (All Points): ₹ {formatNumber(runningSales)}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
           <button className="button-outline" onClick={() => navigate("/shift/start")}>← Back</button>
-          <button className="button-outline" onClick={addPoint}>+ Add Another Point</button>
+          <button className="button-outline" onClick={addPoint}>+ Add Point</button>
           <button className="button-outline" onClick={saveDraft} disabled={saving}>
             {saving ? "Saving..." : "Save Draft"}
           </button>
         </div>
         <button
-          className="button"
+          className="button w-full sm:w-auto"
           onClick={async () => {
             if (!canProceed()) {
               setMessage("Please fill Opening and capture Opening photos for both HSD and MS before proceeding.");

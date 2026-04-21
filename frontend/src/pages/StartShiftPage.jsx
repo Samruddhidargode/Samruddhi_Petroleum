@@ -134,47 +134,55 @@ export default function StartShiftPage() {
   }
 
   return (
-    <div className="card mt-4">
-      <h2 className="text-lg font-semibold text-slate-800">Start New Shift</h2>
-      {message && (
-        <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {message}
-        </div>
-      )}
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <div>
-          <label className="text-sm text-slate-600">Date In</label>
-          <input className="input" type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Time In</label>
-          <input className="input" type="time" value={timeIn} onChange={(e) => setTimeIn(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Shift Number</label>
-          <select className="input" value={shiftNumber} onChange={(e) => setShiftNumber(e.target.value)}>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">QR Scanner No</label>
-          <input className="input" placeholder="Scanner No" value={qrScannerNo} onChange={(e) => setQrScannerNo(e.target.value)} />
-        </div>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button className="button" onClick={handleStartShift} disabled={loading}>
-          {loading ? "Starting..." : "Start Shift"}
-        </button>
-        <button className="button-outline" onClick={handleSaveDraft} disabled={loading}>
-          {loading ? "Saving..." : "Save Draft"}
-        </button>
-        {hasDraft && (
-          <button className="button-outline" onClick={() => navigate("/shift/nozzle")}>
-            Continue to Nozzle →
-          </button>
+    <div className="mx-auto max-w-2xl px-4 pb-10">
+      <div className="card">
+        <h2 className="text-2xl font-bold text-slate-800 mb-1">Start New Shift</h2>
+        <p className="text-sm text-slate-500 mb-4">Initialize your shift with date, time, and pump details</p>
+        
+        {message && (
+          <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.includes("saved") || message.includes("Draft") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+            {message}
+          </div>
         )}
+        
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date In</label>
+              <input className="input" type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Time In</label>
+              <input className="input" type="time" value={timeIn} onChange={(e) => setTimeIn(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Shift Number</label>
+              <select className="input" value={shiftNumber} onChange={(e) => setShiftNumber(e.target.value)}>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">QR Scanner No</label>
+              <input className="input" placeholder="Scanner ID" value={qrScannerNo} onChange={(e) => setQrScannerNo(e.target.value)} />
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button className="button flex-1" onClick={handleStartShift} disabled={loading}>
+              {loading ? "Starting..." : "▶️ Start Shift"}
+            </button>
+            <button className="button-outline flex-1" onClick={handleSaveDraft} disabled={loading}>
+              {loading ? "Saving..." : "💾 Save Draft"}
+            </button>
+            {hasDraft && (
+              <button className="button-outline flex-1" onClick={() => navigate("/shift/nozzle")}>
+                ▶️ Continue →
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

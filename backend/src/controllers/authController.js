@@ -39,6 +39,10 @@ async function login(req, res) {
   });
 }
 
+async function logout(req, res) {
+  return res.json({ ok: true, message: "Logged out" });
+}
+
 async function changePassword(req, res) {
   const schema = z.object({
     currentPassword: z.string().min(4),
@@ -69,4 +73,4 @@ async function changePassword(req, res) {
   return res.json({ ok: true });
 }
 
-module.exports = { login, changePassword };
+module.exports = { login, logout, changePassword };

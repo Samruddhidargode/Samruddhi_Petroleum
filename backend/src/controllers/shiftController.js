@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs");
 const { z } = require("zod");
 const prisma = require("../prismaClient");
 
@@ -108,7 +109,12 @@ async function getShiftDraft(req, res) {
       where: { id },
       include: {
         dsm: { select: { id: true, name: true, dsmCode: true, role: true } },
-        nozzleEntries: true
+        nozzleEntries: true,
+        cashDrops: true,
+        qrEntries: true,
+        cardEntries: true,
+        fleetEntries: true,
+        partyCredits: true
       }
     });
 
@@ -129,6 +135,142 @@ async function getShiftDraft(req, res) {
   }
 }
 
+
+async function getShifts(req, res) {
+  try {
+    if (!["ADMIN", "MANAGER"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const {
+      date,
+      dsm,
+      shiftNumber,
+      status,
+      search,
+      page = "1",
+      limit = "50"
+    } = req.query;
+
+    const parsedPage = Math.max(1, Number(page) || 1);
+    const parsedLimit = Math.min(200, Math.max(1, Number(limit) || 50));
+
+    const where = {};
+
+    if (date) {
+      const dayStart = new Date(date);
+      if (!Number.isNaN(dayStart.getTime())) {
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        where.shiftDate = { gte: dayStart, lt: dayEnd };
+      }
+    }
+
+    if (shiftNumber && !Number.isNaN(Number(shiftNumber))) {
+      where.shiftNumber = Number(shiftNumber);
+    }
+
+    if (["DRAFT", "SUBMITTED"].includes(status)) {
+      where.status = status;
+    }
+
+    if (dsm && String(dsm).trim()) {
+      const dsmValue = String(dsm).trim();
+      where.dsm = {
+        OR: [
+          { dsmCode: { contains: dsmValue, mode: "insensitive" } },
+          { name: { contains: dsmValue, mode: "insensitive" } }
+        ]
+      };
+    }
+
+    if (search && String(search).trim()) {
+      const searchValue = String(search).trim();
+      where.OR = [
+        { id: { contains: searchValue, mode: "insensitive" } },
+        {
+          dsm: {
+            OR: [
+              { dsmCode: { contains: searchValue, mode: "insensitive" } },
+              { name: { contains: searchValue, mode: "insensitive" } }
+            ]
+          }
+        }
+      ];
+    }
+
+    const [total, items] = await prisma.$transaction([
+      prisma.shift.count({ where }),
+      prisma.shift.findMany({
+        where,
+        orderBy: [{ shiftDate: "desc" }, { timeIn: "desc" }],
+        skip: (parsedPage - 1) * parsedLimit,
+        take: parsedLimit,
+        select: {
+          id: true,
+          shiftDate: true,
+          shiftNumber: true,
+          status: true,
+          totalSales: true,
+          totalCollected: true,
+          difference: true,
+          dsm: { select: { name: true, dsmCode: true } }
+        }
+      })
+    ]);
+
+    return res.json({ items, total, page: parsedPage, limit: parsedLimit });
+  } catch (error) {
+    console.error("Get shifts error:", error.stack || error.message);
+    return res.status(500).json({ message: `Server error: ${error.message}` });
+  }
+}
+
+async function getShiftsByDate(req, res) {
+  try {
+    if (!["ADMIN", "MANAGER"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const { date } = req.params;
+    const dayStart = new Date(date);
+    if (Number.isNaN(dayStart.getTime())) {
+      return res.status(400).json({ message: "Invalid date" });
+    }
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const items = await prisma.shift.findMany({
+      where: { shiftDate: { gte: dayStart, lt: dayEnd } },
+      orderBy: [{ shiftNumber: "asc" }, { timeIn: "asc" }],
+      select: {
+        id: true,
+        shiftDate: true,
+        shiftNumber: true,
+        status: true,
+        totalSales: true,
+        totalCollected: true,
+        difference: true,
+        dsm: { select: { name: true, dsmCode: true } }
+      }
+    });
+
+    const summary = items.reduce(
+      (acc, item) => {
+        acc.totalSales += Number(item.totalSales || 0);
+        acc.totalCollected += Number(item.totalCollected || 0);
+        acc.totalDifference += Number(item.difference || 0);
+        return acc;
+      },
+      { totalSales: 0, totalCollected: 0, totalDifference: 0 }
+    );
+
+    return res.json({ date, summary, items });
+  } catch (error) {
+    console.error("Get shifts by date error:", error.stack || error.message);
+    return res.status(500).json({ message: `Server error: ${error.message}` });
+  }
+}
 async function addNozzleEntry(req, res) {
   const schema = z.object({
     shiftId: z.string(),
@@ -377,9 +519,36 @@ async function submitShift(req, res) {
     return res.status(400).json({ message: "Invalid input" });
   }
 
+  const shift = await prisma.shift.findUnique({
+    where: { id: parsed.data.shiftId }
+  });
+  if (!shift) {
+    return res.status(404).json({ message: "Shift not found" });
+  }
+
+  if (shift.dsmId !== req.user.userId) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  if (shift.status === "SUBMITTED") {
+    return res.status(400).json({ message: "Shift already submitted" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId }
+  });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const isPasswordValid = await bcrypt.compare(parsed.data.confirmPassword, user.passwordHash || "");
+  if (!isPasswordValid) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
   await recalcShiftTotals(parsed.data.shiftId);
 
-  const shift = await prisma.shift.update({
+  const updatedShift = await prisma.shift.update({
     where: { id: parsed.data.shiftId },
     data: {
       timeOut: new Date(parsed.data.timeOut),
@@ -390,11 +559,13 @@ async function submitShift(req, res) {
     }
   });
 
-  return res.json(shift);
+  return res.json(updatedShift);
 }
 
 module.exports = {
   createShift,
+  getShifts,
+  getShiftsByDate,
   getShiftDetails,
   getShiftDraft,
   addNozzleEntry,
@@ -406,3 +577,4 @@ module.exports = {
   addPartyCredit,
   submitShift
 };
+

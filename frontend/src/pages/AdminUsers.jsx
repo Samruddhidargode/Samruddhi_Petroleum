@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
+  const userRole = localStorage.getItem("userRole");
+  const isAdminOnly = userRole === "ADMIN";
   const [activeTab, setActiveTab] = useState("dsm");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ role: activeTab === "dsm" ? "DSM" : "MANAGER", dsmCode: "", name: "", password: "" });
@@ -223,6 +227,12 @@ export default function AdminUsers() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">User Management</h1>
 
+        {!isAdminOnly && (
+          <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-700">
+            ⚠️ User management is restricted to Admins only. Manager accounts have read-only access.
+          </div>
+        )}
+
         {message && (
           <div className={`mb-4 rounded-lg p-3 text-sm ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
             {message.text}
@@ -245,7 +255,11 @@ export default function AdminUsers() {
             </button>
           </div>
 
-          <button className="button mb-4" onClick={() => setShowCreateForm(!showCreateForm)}>
+          <button 
+            className="button mb-4" 
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            disabled={!isAdminOnly}
+          >
             + Add {activeTab === "dsm" ? "DSM" : "Manager"}
           </button>
 
@@ -330,13 +344,19 @@ export default function AdminUsers() {
                         </span>
                       </td>
                       <td className="px-4 py-2 text-xs">
-                        {u.isActive ? (
-                          <button className="button-outline mr-2" onClick={() => handleDeactivate(u.id)}>Deactivate</button>
+                        {isAdminOnly ? (
+                          <>
+                            {u.isActive ? (
+                              <button className="button-outline mr-2" onClick={() => handleDeactivate(u.id)}>Deactivate</button>
+                            ) : (
+                              <button className="button-outline mr-2" onClick={() => handleActivate(u.id)}>Activate</button>
+                            )}
+                            <button className="button-outline mr-2" onClick={() => handleResetPassword(u.id)}>Reset Password</button>
+                            <button className="button-outline" onClick={() => handleDelete(u.id)}>Delete</button>
+                          </>
                         ) : (
-                          <button className="button-outline mr-2" onClick={() => handleActivate(u.id)}>Activate</button>
+                          <span className="text-slate-400 text-xs">View Only</span>
                         )}
-                        <button className="button-outline mr-2" onClick={() => handleResetPassword(u.id)}>Reset Password</button>
-                        <button className="button-outline" onClick={() => handleDelete(u.id)}>Delete</button>
                       </td>
                     </tr>
                   ))}

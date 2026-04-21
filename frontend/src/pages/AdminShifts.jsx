@@ -1,11 +1,63 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar";
+
+const initialFilters = {
+  date: "",
+  dsm: "",
+  shiftNumber: "",
+  status: ""
+};
 
 export default function AdminShifts() {
   const [shiftId, setShiftId] = useState("");
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [searchText, setSearchText] = useState("");
+  const [filters, setFilters] = useState(initialFilters);
+  const [shifts, setShifts] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+
+  useEffect(() => {
+    loadShifts();
+  }, []);
+
+  async function loadShifts(search = searchText, extraFilters = filters) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setMessage("Not authenticated. Please login again.");
+      return;
+    }
+
+    setListLoading(true);
+    setMessage("");
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("search", search.trim());
+      if (extraFilters.date) params.set("date", extraFilters.date);
+      if (extraFilters.dsm.trim()) params.set("dsm", extraFilters.dsm.trim());
+      if (extraFilters.shiftNumber) params.set("shiftNumber", extraFilters.shiftNumber);
+      if (extraFilters.status) params.set("status", extraFilters.status);
+
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const response = await fetch(`/api/shifts${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setMessage(data?.message || "Failed to load shifts");
+        return;
+      }
+
+      setShifts(Array.isArray(data.items) ? data.items : []);
+    } catch (error) {
+      setMessage(error?.message || "Failed to load shifts");
+    } finally {
+      setListLoading(false);
+    }
+  }
 
   async function handleLoadPhotos() {
     if (!shiftId) {
@@ -23,7 +75,7 @@ export default function AdminShifts() {
     setMessage("");
     try {
       const response = await fetch(`/api/uploads/nozzle-photos?shiftId=${encodeURIComponent(shiftId)}`, {
-        headers: { "Authorization": `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json().catch(() => []);
       if (response.ok) {
@@ -38,12 +90,26 @@ export default function AdminShifts() {
     }
   }
 
+  function handleFilterChange(field, value) {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function resetFilters() {
+    setSearchText("");
+    setFilters(initialFilters);
+    loadShifts("", initialFilters);
+  }
+
   function getLabel(entityId, entityType) {
     const parts = (entityId || "").split(":");
     const pointNo = parts[1] || "?";
     const fuel = parts[2] || "?";
     const type = entityType === "NOZZLE_OPENING" ? "Opening" : "Closing";
-    return `Point ${pointNo} • ${fuel} • ${type}`;
+    return `Point ${pointNo} - ${fuel} - ${type}`;
+  }
+
+  function formatInr(value) {
+    return `Rs ${Number(value || 0).toFixed(2)}`;
   }
 
   return (
@@ -68,9 +134,40 @@ export default function AdminShifts() {
         </div>
 
         <div className="card">
+          <div className="mb-4 grid gap-2 md:grid-cols-5">
+            <input
+              className="input"
+              placeholder="Search by id or DSM"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <input className="input" type="date" value={filters.date} onChange={(e) => handleFilterChange("date", e.target.value)} />
+            <input
+              className="input"
+              placeholder="DSM name/code"
+              value={filters.dsm}
+              onChange={(e) => handleFilterChange("dsm", e.target.value)}
+            />
+            <select className="input" value={filters.shiftNumber} onChange={(e) => handleFilterChange("shiftNumber", e.target.value)}>
+              <option value="">All shifts</option>
+              <option value="1">Shift 1</option>
+              <option value="2">Shift 2</option>
+              <option value="3">Shift 3</option>
+            </select>
+            <select className="input" value={filters.status} onChange={(e) => handleFilterChange("status", e.target.value)}>
+              <option value="">All status</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="SUBMITTED">SUBMITTED</option>
+            </select>
+          </div>
+
           <div className="mb-4 flex gap-2">
-            <input className="input w-64" placeholder="Search by date/DSM/shift" />
-            <button className="button">Search</button>
+            <button className="button" onClick={() => loadShifts(searchText, filters)} disabled={listLoading}>
+              {listLoading ? "Searching..." : "Search"}
+            </button>
+            <button className="button-outline" onClick={resetFilters} disabled={listLoading}>
+              Reset
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -88,18 +185,34 @@ export default function AdminShifts() {
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-2">—</td>
-                  <td className="px-4 py-2">—</td>
-                  <td className="px-4 py-2">—</td>
-                  <td className="px-4 py-2">₹ 0</td>
-                  <td className="px-4 py-2">₹ 0</td>
-                  <td className="px-4 py-2 text-emerald-600">₹ 0</td>
-                  <td className="px-4 py-2">—</td>
-                  <td className="px-4 py-2">
-                    <button className="button-outline text-xs">View</button>
-                  </td>
-                </tr>
+                {listLoading && (
+                  <tr className="border-t hover:bg-slate-50">
+                    <td className="px-4 py-2 text-slate-500" colSpan={8}>Loading shifts...</td>
+                  </tr>
+                )}
+                {!listLoading && shifts.length === 0 && (
+                  <tr className="border-t hover:bg-slate-50">
+                    <td className="px-4 py-2 text-slate-500" colSpan={8}>No shifts found.</td>
+                  </tr>
+                )}
+                {!listLoading && shifts.map((shift) => (
+                  <tr key={shift.id} className="border-t hover:bg-slate-50">
+                    <td className="px-4 py-2">{new Date(shift.shiftDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-2">{shift.shiftNumber}</td>
+                    <td className="px-4 py-2">{shift?.dsm?.name} ({shift?.dsm?.dsmCode})</td>
+                    <td className="px-4 py-2">{formatInr(shift.totalSales)}</td>
+                    <td className="px-4 py-2">{formatInr(shift.totalCollected)}</td>
+                    <td className={`px-4 py-2 ${Number(shift.difference || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {formatInr(shift.difference)}
+                    </td>
+                    <td className="px-4 py-2">{shift.status}</td>
+                    <td className="px-4 py-2">
+                      <button className="button-outline text-xs" onClick={() => window.location.assign(`/admin/shifts/${shift.id}`)}>
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

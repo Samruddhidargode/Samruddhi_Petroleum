@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Petroleum System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <h2>Petroleum System</h2>
+        <ul>
+            <li>Home</li>
+            <li>Services</li>
+            <li>Reports</li>
+            <li>Contact</li>
+        </ul>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Welcome to Smart Fuel Station</h1>
+        <p>Manage Fuel Sales Efficiently</p>
+    </div>
+
+    <!-- Card Section -->
+    <div class="container">
+
+        <h2>Fuel Sales</h2>
+
+<label>Fuel Type:</label>
+<select id="fuel">
+    <option>Petrol</option>
+    <option>Diesel</option>
+</select>
+
+<label>Quantity (Litres):</label>
+<input type="number" id="quantity">
+
+<button onclick="addSale()">Add Sale</button>
+
+<h3 id="result"></h3>
+
+<hr>
+
+<h2>Sales History</h2>
+
+<table border="1" width="100%" id="salesTable">
+    <tr>
+        <th>Fuel</th>
+        <th>Quantity</th>
+        <th>Total (₹)</th>
+    </tr>
+</table>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

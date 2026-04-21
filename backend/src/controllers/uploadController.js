@@ -45,6 +45,44 @@ async function uploadNozzlePhoto(req, res) {
   }
 }
 
+async function uploadReceipt(req, res) {
+  try {
+    const schema = z.object({
+      imageData: z.string().min(10),
+      receiptType: z.enum(["QR", "CARD", "FLEET", "PARTY_CREDIT", "MDU"]).optional(),
+      referenceId: z.string().min(1).optional()
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid input", errors: parsed.error.issues || [] });
+    }
+
+    const receiptType = parsed.data.receiptType || "RECEIPT";
+    const reference = parsed.data.referenceId || req.user.userId;
+    const entityType = `RECEIPT_${receiptType}`;
+    const entityId = `${reference}:${Date.now()}`;
+
+    const image = await prisma.image.create({
+      data: {
+        entityType,
+        entityId,
+        url: parsed.data.imageData
+      }
+    });
+
+    return res.json({
+      id: image.id,
+      url: image.url,
+      entityType,
+      entityId
+    });
+  } catch (error) {
+    console.error("Upload receipt error:", error.stack || error.message);
+    return res.status(500).json({ message: `Server error: ${error.message}` });
+  }
+}
+
 async function listNozzlePhotos(req, res) {
   try {
     const schema = z.object({ shiftId: z.string().min(1) });
@@ -95,4 +133,4 @@ async function deleteNozzlePhoto(req, res) {
   }
 }
 
-module.exports = { uploadNozzlePhoto, listNozzlePhotos, deleteNozzlePhoto };
+module.exports = { uploadNozzlePhoto, uploadReceipt, listNozzlePhotos, deleteNozzlePhoto };

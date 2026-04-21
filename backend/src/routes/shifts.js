@@ -2,6 +2,8 @@ const express = require("express");
 const { authRequired, authorizeRoles } = require("../middleware/auth");
 const {
   createShift,
+  getShifts,
+  getShiftsByDate,
   getShiftDetails,
   getShiftDraft,
   addNozzleEntry,
@@ -18,6 +20,8 @@ const router = express.Router();
 
 router.post("/create", authRequired, createShift);
 router.get("/draft/:id", authRequired, getShiftDraft);
+router.get("/by-date/:date", authRequired, authorizeRoles("ADMIN", "MANAGER"), getShiftsByDate);
+router.get("/", authRequired, authorizeRoles("ADMIN", "MANAGER"), getShifts);
 router.get("/:id", authRequired, authorizeRoles("ADMIN", "MANAGER"), getShiftDetails);
 router.post("/nozzle", authRequired, addNozzleEntry);
 router.post("/nozzle-draft", authRequired, saveNozzleDraft);

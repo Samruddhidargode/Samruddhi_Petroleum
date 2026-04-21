@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import TopBar from "./components/TopBar";
 import Stepper from "./components/Stepper";
+import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import StartShiftPage from "./pages/StartShiftPage";
 import NozzlePage from "./pages/NozzlePage";
@@ -29,7 +30,7 @@ function PrivateRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return children;
@@ -37,14 +38,18 @@ function PrivateRoute({ children, allowedRoles }) {
 
 export default function App() {
   const userRole = localStorage.getItem("userRole");
+  const token = localStorage.getItem("token");
+  const isAuthPage = window.location.pathname === "/" || window.location.pathname.startsWith("/login");
+  const isAdminPanel = userRole && (userRole === "ADMIN" || userRole === "MANAGER");
 
   return (
     <div className="min-h-screen">
-      <TopBar />
-      <div className={userRole && (userRole === "ADMIN" || userRole === "MANAGER") ? "" : "mx-auto max-w-5xl px-4 pb-10"}>
-        {!(userRole && (userRole === "ADMIN" || userRole === "MANAGER")) && <Stepper />}
+      {!isAuthPage && token && <TopBar />}
+      <div className={isAdminPanel ? "" : !isAuthPage ? "mx-auto max-w-5xl px-4 pb-10" : ""}>
+        {!isAuthPage && token && !isAdminPanel && <Stepper />}
         <Routes>
-          <Route path="/" element={<LoginPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
 
           {/* DSM Routes */}
           <Route

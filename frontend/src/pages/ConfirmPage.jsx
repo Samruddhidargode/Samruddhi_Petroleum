@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function ConfirmPage() {
@@ -6,40 +6,17 @@ export default function ConfirmPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const validationError = useMemo(() => {
+  async function handleSubmit() {
     const shiftId = localStorage.getItem("activeShiftId");
-    if (!shiftId) return "Shift not started.";
+    const token = localStorage.getItem("token");
 
-    const raw = localStorage.getItem("shiftNozzleDraft");
-    if (!raw) return "No nozzle data found.";
-
-    try {
-      const points = JSON.parse(raw);
-      if (!Array.isArray(points) || points.length === 0) return "No nozzle points entered.";
-      for (const point of points) {
-        for (const fuel of ["HSD", "MS"]) {
-          const row = point?.fuels?.[fuel];
-          if (!row?.opening) {
-            return `Missing opening readings for ${fuel}.`;
-          }
-          if (!row?.openingPhoto) {
-            return `Missing opening photo for ${fuel}.`;
-          }
-        }
-      }
-    } catch {
-      return "Invalid nozzle data.";
-    }
-
-    return "";
-  }, []);
-
-  function handleSubmit() {
-    if (validationError) {
-      setMessage(validationError);
+    if (!shiftId || !token) {
+      setMessage("Missing shift or login session.");
       return;
     }
+
     if (!confirmed) {
       setMessage("Please confirm the data is correct.");
       return;
@@ -49,30 +26,105 @@ export default function ConfirmPage() {
       return;
     }
 
-    setMessage("Shift is ready for submission.");
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/shifts/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          shiftId,
+          timeOut: new Date().toISOString(),
+          confirmPassword: password
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(data.message || "Failed to submit shift.");
+        return;
+      }
+
+      localStorage.removeItem("activeShiftId");
+      localStorage.removeItem("activeShiftNumber");
+      localStorage.removeItem("shiftNozzleDraft");
+      localStorage.removeItem("shiftStartDraft");
+      setMessage("Shift submitted successfully.");
+      navigate("/dashboard");
+    } catch (error) {
+      setMessage(error.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="card">
-      <h2 className="text-lg font-semibold text-slate-800">Confirmation</h2>
-      {message && (
-        <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {message}
+    <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+      <div className="card">
+        <h2 className="text-2xl font-bold text-slate-800 mb-1">Final Confirmation</h2>
+        <p className="text-sm text-slate-500 mb-4">Verify and submit your shift</p>
+        
+        {message && (
+          <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.includes("successfully") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+            {message}
+          </div>
+        )}
+        
+        <div className="space-y-4">
+          {/* Confirmation Checkbox */}
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="h-5 w-5 mt-0.5 rounded border-blue-300" 
+                checked={confirmed} 
+                onChange={(e) => setConfirmed(e.target.checked)} 
+              />
+              <div>
+                <p className="font-medium text-blue-900">Confirm data accuracy</p>
+                <p className="text-sm text-blue-700 mt-1">
+                  I confirm that all nozzle readings, cash drops, and payment transactions are accurate and complete.
+                </p>
+              </div>
+            </label>
+          </div>
+          
+          {/* Password Verification */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">🔐 Re-enter Password</label>
+            <input 
+              className="input" 
+              type="password" 
+              placeholder="Enter your password to confirm"
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+            <p className="text-xs text-slate-500 mt-1">This verifies your identity for security</p>
+          </div>
+          
+          {/* Warning Box */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-medium text-amber-900">⚠️ Important</p>
+            <p className="text-xs text-amber-700 mt-1">
+              Once submitted, shift data cannot be modified. Please ensure all information is correct before proceeding.
+            </p>
+          </div>
         </div>
-      )}
-      <div className="mt-4 space-y-3">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="h-4 w-4" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-          I confirm the above data is correct
-        </label>
-        <div>
-          <label className="text-sm text-slate-600">Re-enter Password</label>
-          <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        <div className="flex items-center justify-between">
-          <button className="button-outline" onClick={() => navigate("/shift/summary")}>← Back</button>
-          <button className="button w-full md:w-auto" onClick={handleSubmit}>Submit Shift</button>
-        </div>
+      </div>
+      
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button className="button-outline" onClick={() => navigate("/shift/summary")}>← Back</button>
+        <button 
+          className="button flex-1 sm:flex-none" 
+          onClick={handleSubmit} 
+          disabled={loading || !confirmed}
+        >
+          {loading ? "Submitting..." : "✓ Submit Shift"}
+        </button>
       </div>
     </div>
   );
