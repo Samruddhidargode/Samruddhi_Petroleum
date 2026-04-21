@@ -1,0 +1,71 @@
+# SAMRUDDHI PETROLEUM - DSM SHIFT MANAGEMENT SYSTEM
+# Requirements for running on a new laptop
+# ==========================================
+
+## SYSTEM REQUIREMENTS
+- Node.js: v24.13.0 or higher (https://nodejs.org)
+- npm: 10.x or higher (comes with Node.js)
+- PostgreSQL: 13.x or higher (https://www.postgresql.org/download/)
+- Git: Latest version (for cloning the repo)
+
+## DATABASE REQUIREMENTS
+- PostgreSQL Server running on localhost:5432
+- Default credentials:
+  * Username: postgres
+  * Password: root (change after setup)
+  * Database name: samruddhi
+
+## FRONTEND DEPENDENCIES (React 18.3.1 + Vite 5.4.2)
+- react@^18.3.1
+- react-dom@^18.3.1
+- react-router-dom@^6.26.2
+- react-i18next@^14.1.0
+- i18next@^23.12.2
+- framer-motion@^12.38.0
+- three@^0.184.0
+- @react-three/fiber@^9.6.0
+- @react-three/drei@^10.7.7
+- vite@^5.4.2
+- tailwindcss@^3.4.10
+- postcss@^8.4.41
+- autoprefixer@^10.4.20
+- @vitejs/plugin-react@^4.3.1
+
+## BACKEND DEPENDENCIES (Express.js + Prisma ORM)
+- express@^4.19.2
+- @prisma/client@^5.19.1
+- prisma@^5.19.1
+- jsonwebtoken@^9.0.2
+- bcryptjs@^2.4.3
+- dotenv@^16.4.5
+- cors@^2.8.5
+- helmet@^7.1.0
+- morgan@^1.10.0
+- zod@^3.23.8
+- nodemon@^3.1.4 (dev only)
+
+## PORT REQUIREMENTS
+- Frontend Dev Server: 5173 (auto-falls back to 5174)
+- Backend API: 4000
+- PostgreSQL: 5432
+
+## INSTALLATION STEPS
+1. Install Node.js from https://nodejs.org (v24.13.0 or higher)
+2. Install PostgreSQL from https://www.postgresql.org/download/
+3. Clone repository: git clone <repo-url>
+4. See SETUP.md for detailed installation instructions
+
+## ENVIRONMENT SETUP
+- Copy .env.example to .env in the backend folder
+- Configure DATABASE_URL, JWT_SECRET, and CORS_ORIGINS
+- See .env.example for all required variables
+
+## QUICK START
+After all dependencies are installed:
+  cd backend && npm install && npm run prisma:generate
+  cd ../frontend && npm install
+  # In backend terminal: npm run dev
+  # In frontend terminal: npm run dev
+  # Open http://localhost:5174
+
+For detailed setup instructions, see SETUP.md
