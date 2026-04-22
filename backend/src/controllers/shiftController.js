@@ -79,7 +79,12 @@ async function getShiftDetails(req, res) {
       where: { id },
       include: {
         dsm: { select: { id: true, name: true, dsmCode: true } },
-        nozzleEntries: true
+        nozzleEntries: true,
+        cashDrops: true,
+        qrEntries: true,
+        cardEntries: true,
+        fleetEntries: true,
+        partyCredits: true
       }
     });
 
@@ -95,7 +100,50 @@ async function getShiftDetails(req, res) {
       select: { id: true, entityType: true, entityId: true, url: true }
     });
 
-    return res.json({ shift, images });
+    // Build nozzle breakdown by point
+    const nozzlesByPoint = {};
+    (shift.nozzleEntries || []).forEach((entry) => {
+      if (!nozzlesByPoint[entry.pointNo]) {
+        nozzlesByPoint[entry.pointNo] = { pointNo: entry.pointNo, hsd: 0, ms: 0, total: 0 };
+      }
+      nozzlesByPoint[entry.pointNo][entry.fuelType.toLowerCase()] = Number(entry.amount || 0);
+      nozzlesByPoint[entry.pointNo].total += Number(entry.amount || 0);
+    });
+    const nozzleBreakdown = Object.values(nozzlesByPoint).sort((a, b) => a.pointNo - b.pointNo);
+
+    // Build payment breakdown
+    const cashTotal = (shift.cashDrops || []).reduce((sum, cd) => sum + Number(cd.totalAmount || 0), 0);
+    const qrTotal = (shift.qrEntries || []).reduce((sum, qr) => sum + Number(qr.amount || 0), 0);
+    const cardTotal = (shift.cardEntries || []).reduce((sum, card) => sum + Number(card.amount || 0), 0);
+    const fleetTotal = (shift.fleetEntries || []).reduce((sum, fleet) => sum + Number(fleet.amount || 0), 0);
+    const creditTotal = (shift.partyCredits || []).reduce((sum, credit) => sum + Number(credit.amount || 0), 0);
+
+    const paymentBreakdown = {
+      cash: cashTotal,
+      digital: qrTotal + cardTotal,
+      qr: qrTotal,
+      card: cardTotal,
+      fleet: fleetTotal,
+      credit: creditTotal,
+      total: cashTotal + qrTotal + cardTotal + fleetTotal + creditTotal
+    };
+
+    return res.json({
+      shift: {
+        id: shift.id,
+        shiftNumber: shift.shiftNumber,
+        shiftDate: shift.shiftDate,
+        status: shift.status,
+        submitter: shift.dsm?.name || "Unknown",
+        submitterCode: shift.dsm?.dsmCode || "N/A",
+        totalSales: Number(shift.totalSales || 0),
+        totalCollected: Number(shift.totalCollected || 0),
+        difference: Number(shift.difference || 0)
+      },
+      nozzles: nozzleBreakdown,
+      payments: paymentBreakdown,
+      images
+    });
   } catch (error) {
     console.error("Get shift details error:", error.stack || error.message);
     return res.status(500).json({ message: `Server error: ${error.message}` });

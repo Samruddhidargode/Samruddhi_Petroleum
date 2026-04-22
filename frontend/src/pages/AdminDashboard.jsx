@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AdminSidebar from "../components/AdminSidebar";
+import SparklineChart from "../components/SparklineChart";
+import NozzleHeatmap from "../components/NozzleHeatmap";
+import VarianceWaterfall from "../components/VarianceWaterfall";
+import ShiftDetailsDrawer from "../components/ShiftDetailsDrawer";
+import AlertDetailsPanel from "../components/AlertDetailsPanel";
+import FilterBar from "../components/FilterBar";
+import PieChart from "../components/PieChart";
+import LineChart from "../components/LineChart";
 
 const containerVariants = {
   hidden: {},
@@ -64,7 +72,7 @@ function GlassPanel({ children, className = "" }) {
   );
 }
 
-function MetricCard({ label, value, subtitle, accent, badge }) {
+function MetricCard({ label, value, subtitle, accent, badge, sparklineData, sparklineColor }) {
   return (
     <GlassPanel className="relative overflow-hidden p-5">
       <div
@@ -81,11 +89,16 @@ function MetricCard({ label, value, subtitle, accent, badge }) {
       </div>
       <div className="text-3xl font-bold tracking-tight text-slate-900">{value}</div>
       <p className="mt-2 text-sm text-slate-600">{subtitle}</p>
+      {sparklineData && sparklineData.length > 0 && (
+        <div className="mt-4 h-12">
+          <SparklineChart data={sparklineData} label={label} color={sparklineColor || accent} height={12} />
+        </div>
+      )}
     </GlassPanel>
   );
 }
 
-function HorizontalBars({ title, rows, valueFormatter, emptyText = "No data available" }) {
+function HorizontalBars({ title, rows, valueFormatter, emptyText = "No data available", onRowClick }) {
   const maxValue = Math.max(...rows.map((row) => Number(row.value || 0)), 0);
 
   return (
@@ -102,17 +115,24 @@ function HorizontalBars({ title, rows, valueFormatter, emptyText = "No data avai
       ) : (
         <div className="space-y-4">
           {rows.map((row, index) => {
+            const isClickable = onRowClick && row.shiftId;
             const barColor = palette[index % palette.length];
             const width = maxValue > 0 ? Math.max(8, (Number(row.value || 0) / maxValue) * 100) : 0;
             return (
-              <div key={row.key} className="space-y-2">
+              <div
+                key={row.key}
+                className={`space-y-2 p-3 rounded-lg transition ${
+                  isClickable ? "cursor-pointer hover:bg-slate-50" : ""
+                }`}
+                onClick={() => isClickable && onRowClick?.(row.shiftId)}
+              >
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="font-medium text-slate-700">{row.label}</span>
                   <span className="font-semibold text-slate-900">{valueFormatter(row.value)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200">
                   <div
-                    className="h-2 rounded-full shadow-md"
+                    className="h-2 rounded-full shadow-md transition"
                     style={{
                       width: `${width}%`,
                       background: `linear-gradient(90deg, ${barColor}, ${barColor}99)`
@@ -178,10 +198,22 @@ export default function AdminDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  
+  // Filter state
+  const [selectedPeriod, setSelectedPeriod] = useState("today");
+  const [fromDate, setFromDate] = useState(new Date().toISOString().slice(0, 10));
+  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10));
+  const [compareMode, setCompareMode] = useState("yesterday");
+  const [showCompareBadges, setShowCompareBadges] = useState(true);
+
+  // Drill-down state
+  const [expandedShiftId, setExpandedShiftId] = useState(null);
+  const [shiftDetailsData, setShiftDetailsData] = useState(null);
+  const [shiftDetailsLoading, setShiftDetailsLoading] = useState(false);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [fromDate, toDate, compareMode]);
 
   async function loadDashboard() {
     const token = localStorage.getItem("token");
@@ -194,7 +226,13 @@ export default function AdminDashboard() {
     setLoading(true);
     setMessage("");
     try {
-      const response = await fetch("/api/analytics/dashboard", {
+      const query = new URLSearchParams({
+        from: fromDate,
+        to: toDate,
+        compare: compareMode
+      }).toString();
+      
+      const response = await fetch(`/api/analytics/dashboard?${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const body = await response.json().catch(() => ({}));
@@ -210,6 +248,59 @@ export default function AdminDashboard() {
     }
   }
 
+  async function loadShiftDetails(shiftId) {
+    if (!shiftId) return;
+    
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setShiftDetailsLoading(true);
+    try {
+      const response = await fetch(`/api/shifts/${shiftId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setShiftDetailsData(body);
+      }
+    } catch (error) {
+      console.error("Failed to load shift details:", error);
+    } finally {
+      setShiftDetailsLoading(false);
+    }
+  }
+
+  // Handle period filter change
+  function handlePeriodChange(period) {
+    setSelectedPeriod(period);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    switch (period) {
+      case "today":
+        setFromDate(today.toISOString().slice(0, 10));
+        setToDate(today.toISOString().slice(0, 10));
+        setCompareMode("yesterday");
+        break;
+      case "week":
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - today.getDay());
+        setFromDate(weekStart.toISOString().slice(0, 10));
+        setToDate(today.toISOString().slice(0, 10));
+        setCompareMode("lastWeek");
+        break;
+      case "month":
+        const monthStart = new Date(today);
+        monthStart.setDate(1);
+        setFromDate(monthStart.toISOString().slice(0, 10));
+        setToDate(today.toISOString().slice(0, 10));
+        setCompareMode("lastMonth");
+        break;
+      default:
+        break;
+    }
+  }
+
   const userRole = localStorage.getItem("userRole") || "ADMIN";
   const kpis = data?.kpis || {};
   const charts = data?.charts || {};
@@ -221,14 +312,34 @@ export default function AdminDashboard() {
         value: formatInr(kpis.totalSales),
         subtitle: "Live station sales booked for the selected date",
         accent: "#22c55e",
-        badge: <TrendBadge value={Number(kpis.totalSales || 0)} positiveLabel="Strong day" />
+        sparklineColor: "#10b981",
+        sparklineData: showCompareBadges ? data?.sparklines?.totalSales : null,
+        badge: showCompareBadges ? (
+          <TrendBadge
+            value={kpis.salesDelta}
+            positiveLabel={`+${kpis.salesDelta?.toFixed(1) || 0}%`}
+            negativeLabel={`${kpis.salesDelta?.toFixed(1) || 0}%`}
+          />
+        ) : (
+          <TrendBadge value={Number(kpis.totalSales || 0)} positiveLabel="Strong day" />
+        )
       },
       {
         label: "Total Collection",
         value: formatInr(kpis.totalCollected),
         subtitle: "Cash + digital + credit collections captured",
         accent: "#38bdf8",
-        badge: <TrendBadge value={Number(kpis.totalCollected || 0)} positiveLabel="On track" />
+        sparklineColor: "#0ea5e9",
+        sparklineData: showCompareBadges ? data?.sparklines?.totalCollected : null,
+        badge: showCompareBadges ? (
+          <TrendBadge
+            value={kpis.collectedDelta}
+            positiveLabel={`+${kpis.collectedDelta?.toFixed(1) || 0}%`}
+            negativeLabel={`${kpis.collectedDelta?.toFixed(1) || 0}%`}
+          />
+        ) : (
+          <TrendBadge value={Number(kpis.totalCollected || 0)} positiveLabel="On track" />
+        )
       },
       {
         label: "Variance",
@@ -255,7 +366,7 @@ export default function AdminDashboard() {
         )
       }
     ],
-    [kpis]
+    [kpis, data?.sparklines, showCompareBadges]
   );
 
   const secondaryMetrics = useMemo(
@@ -318,6 +429,40 @@ export default function AdminDashboard() {
       })),
     [charts.pointWiseSales]
   );
+
+  const comparisonChartData = useMemo(() => {
+    const sparklines = data?.sparklines;
+    if (!sparklines?.totalSales || !sparklines?.totalCollected) {
+      return null;
+    }
+
+    // Create labels for 7 days
+    const labels = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      labels.push(d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }));
+    }
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Total Sales',
+          data: sparklines.totalSales || [],
+          borderColor: '#0066CC',
+          backgroundColor: 'rgba(0, 102, 204, 0.05)',
+        },
+        {
+          label: 'Total Collected',
+          data: sparklines.totalCollected || [],
+          borderColor: '#007C3F',
+          backgroundColor: 'rgba(0, 124, 63, 0.05)',
+        }
+      ]
+    };
+  }, [data?.sparklines]);
 
   const alerts = useMemo(() => {
     const list = [];
@@ -408,20 +553,23 @@ export default function AdminDashboard() {
 
               <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Dashboard date</div>
-                  <div className="mt-1 text-base font-semibold text-slate-900">{data?.date || "-"}</div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Dashboard date range</div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">{fromDate} to {toDate}</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadDashboard}
-                  disabled={loading}
-                  className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Refreshing..." : "Refresh dashboard"}
-                </button>
               </div>
             </div>
           </motion.div>
+
+          <FilterBar
+            selectedPeriod={selectedPeriod}
+            compareMode={compareMode}
+            showCompareBadges={showCompareBadges}
+            onPeriodChange={handlePeriodChange}
+            onCompareModeChange={setCompareMode}
+            onToggleCompareBadges={setShowCompareBadges}
+            onRefresh={loadDashboard}
+            loading={loading}
+          />
 
           <AnimatePresence>
             {message && (
@@ -455,21 +603,33 @@ export default function AdminDashboard() {
             initial="hidden"
             animate="visible"
           >
-            {secondaryMetrics.map((metric, index) => (
-              <motion.div key={metric.label} variants={itemVariants}>
-                <GlassPanel className="p-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-xs uppercase tracking-[0.2em] text-slate-500">{metric.label}</span>
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: palette[(index + 2) % palette.length] }}
-                    />
-                  </div>
-                  <div className="text-2xl font-bold text-white">{metric.value}</div>
-                  <p className="mt-2 text-sm text-slate-400">{metric.subtitle}</p>
-                </GlassPanel>
-              </motion.div>
-            ))}
+            {secondaryMetrics.map((metric, index) => {
+              const bgColor = palette[(index + 2) % palette.length];
+              const bgClass = 
+                index === 0 ? 'bg-blue-50' :
+                index === 1 ? 'bg-emerald-50' :
+                'bg-orange-50';
+              const textClass = 
+                index === 0 ? 'text-blue-700' :
+                index === 1 ? 'text-emerald-700' :
+                'text-orange-700';
+              
+              return (
+                <motion.div key={metric.label} variants={itemVariants}>
+                  <GlassPanel className={`p-5 ${bgClass} border-2`} style={{ borderColor: bgColor + '40' }}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-[0.2em] text-slate-600">{metric.label}</span>
+                      <span
+                        className="h-3 w-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: bgColor }}
+                      />
+                    </div>
+                    <div className={`text-2xl font-bold ${textClass}`}>{metric.value}</div>
+                    <p className="mt-2 text-sm text-slate-600">{metric.subtitle}</p>
+                  </GlassPanel>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
@@ -480,22 +640,6 @@ export default function AdminDashboard() {
               emptyText="No shift sales available for the selected date"
             />
 
-            <DistributionList
-              title="Payment Mix"
-              rows={paymentRows}
-              total={paymentTotal}
-              valueFormatter={formatInr}
-            />
-          </div>
-
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
-            <DistributionList
-              title="Fuel Revenue Split"
-              rows={fuelRows}
-              total={fuelTotal}
-              valueFormatter={formatInr}
-            />
-
             <HorizontalBars
               title="Point-wise Sales Performance"
               rows={pointRows}
@@ -504,50 +648,144 @@ export default function AdminDashboard() {
             />
           </div>
 
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+            <GlassPanel className="p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-semibold text-slate-900">Payment Mix</h3>
+                <p className="mt-1 text-xs text-slate-500">Breakdown by payment mode</p>
+              </div>
+              {paymentRows.length > 0 ? (
+                <div className="mx-auto w-full max-w-[260px]">
+                  <PieChart
+                    data={paymentRows.map(row => ({
+                      label: row.label,
+                      value: Number(row.value || 0)
+                    }))}
+                    height={200}
+                  />
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">No payment data available</p>
+              )}
+            </GlassPanel>
+
+            <GlassPanel className="p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-semibold text-slate-900">Fuel Revenue Split</h3>
+                <p className="mt-1 text-xs text-slate-500">HSD vs MS distribution</p>
+              </div>
+              {fuelRows.length > 0 ? (
+                <div className="mx-auto w-full max-w-[260px]">
+                  <PieChart
+                    data={fuelRows.map(row => ({
+                      label: row.label,
+                      value: Number(row.value || 0)
+                    }))}
+                    height={200}
+                  />
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-slate-500">No fuel data available</p>
+              )}
+            </GlassPanel>
+          </div>
+
+          {/* Comparison and Trend Analysis */}
+          {comparisonChartData && (
+            <div className="mt-6">
+              <GlassPanel className="mx-auto w-full max-w-5xl p-5">
+                <div className="mb-5">
+                  <h3 className="text-lg font-semibold text-slate-900">7-Day Trend Comparison</h3>
+                  <p className="mt-1 text-xs text-slate-500">Sales vs Collection trends over the last week</p>
+                </div>
+                <LineChart
+                  labels={comparisonChartData.labels}
+                  datasets={comparisonChartData.datasets}
+                  height={150}
+                />
+              </GlassPanel>
+            </div>
+          )}
+
+          {/* Heatmap and Waterfall Charts */}
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+            <GlassPanel className="p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-semibold text-slate-900">Nozzle × Shift Heatmap</h3>
+                <p className="mt-1 text-xs text-slate-500">Revenue intensity by point and shift</p>
+              </div>
+              {data?.heatmap && data.heatmap.length > 0 ? (
+                <NozzleHeatmap
+                  heatmap={data.heatmap}
+                  onCellClick={(pointNo, shiftNum) => {
+                    console.log(`Clicked nozzle point ${pointNo}, shift ${shiftNum}`);
+                  }}
+                />
+              ) : (
+                <p className="py-10 text-center text-sm text-slate-500">No heatmap data available</p>
+              )}
+            </GlassPanel>
+
+            <GlassPanel className="p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-semibold text-slate-900">Variance Waterfall</h3>
+                <p className="mt-1 text-xs text-slate-500">Sales breakdown by payment mode</p>
+              </div>
+              <VarianceWaterfall
+                totalSales={Number(kpis.totalSales || 0)}
+                cash={Number(kpis.cashTotal || 0)}
+                digital={Number(kpis.digitalTotal || 0)}
+                fleet={Number(kpis.fleetTotal || 0)}
+                credit={Number(kpis.partyCreditTotal || 0)}
+                variance={Number(kpis.difference || 0)}
+              />
+            </GlassPanel>
+          </div>
+
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
             <GlassPanel className="p-6">
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Operations Snapshot</h3>
-                <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-400">Station intelligence</span>
+                <h3 className="text-lg font-semibold text-slate-900">Operations Snapshot</h3>
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700">Station intelligence</span>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-white/5 bg-black/10 p-5">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Cash vs digital</div>
+                <div className="rounded-2xl border border-blue-100 bg-slate-50 p-5">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-600">Cash vs digital</div>
                   <div className="mt-3 flex items-end gap-3">
-                    <div className="text-2xl font-bold text-white">{formatInr(kpis.cashTotal)}</div>
-                    <div className="pb-1 text-sm text-slate-400">cash</div>
+                    <div className="text-2xl font-bold text-slate-900">{formatInr(kpis.cashTotal)}</div>
+                    <div className="pb-1 text-sm text-slate-600">cash</div>
                   </div>
-                  <div className="mt-2 text-sm text-slate-400">
-                    Digital processed: <span className="font-semibold text-slate-200">{formatInr(kpis.digitalTotal)}</span>
+                  <div className="mt-2 text-sm text-slate-700">
+                    Digital processed: <span className="font-semibold text-blue-700">{formatInr(kpis.digitalTotal)}</span>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/5 bg-black/10 p-5">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Business accounts</div>
+                <div className="rounded-2xl border border-blue-100 bg-slate-50 p-5">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-600">Business accounts</div>
                   <div className="mt-3 flex items-end gap-3">
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-2xl font-bold text-slate-900">
                       {formatInr(Number(kpis.partyCreditTotal || 0) + Number(kpis.fleetTotal || 0))}
                     </div>
-                    <div className="pb-1 text-sm text-slate-400">fleet + credit</div>
+                    <div className="pb-1 text-sm text-slate-600">fleet + credit</div>
                   </div>
-                  <div className="mt-2 text-sm text-slate-400">
-                    Fleet: <span className="font-semibold text-slate-200">{formatInr(kpis.fleetTotal)}</span> • Credit:{" "}
-                    <span className="font-semibold text-slate-200">{formatInr(kpis.partyCreditTotal)}</span>
+                  <div className="mt-2 text-sm text-slate-700">
+                    Fleet: <span className="font-semibold text-blue-700">{formatInr(kpis.fleetTotal)}</span> • Credit:{" "}
+                    <span className="font-semibold text-blue-700">{formatInr(kpis.partyCreditTotal)}</span>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/5 bg-black/10 p-5 md:col-span-2">
+                <div className="rounded-2xl border border-blue-100 bg-slate-50 p-5 md:col-span-2">
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Collection balance</div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-600">Collection balance</div>
                     <TrendBadge
                       value={-Math.abs(Number(kpis.difference || 0))}
                       positiveLabel="Balanced"
                       negativeLabel="Review variance"
                     />
                   </div>
-                  <div className="text-3xl font-bold text-white">{formatInr(kpis.difference)}</div>
-                  <p className="mt-2 text-sm text-slate-400">
+                  <div className="text-3xl font-bold text-slate-900">{formatInr(kpis.difference)}</div>
+                  <p className="mt-2 text-sm text-slate-700">
                     Positive values indicate collections ahead of sales. Negative or mismatched values should be audited
                     against shift entries and payment splits.
                   </p>
@@ -557,26 +795,16 @@ export default function AdminDashboard() {
 
             <GlassPanel className="p-6">
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Alerts & Focus</h3>
-                <span className="text-xs text-slate-400">{alerts.length} item(s)</span>
+                <h3 className="text-lg font-semibold text-slate-900">Alerts & Focus</h3>
+                <span className="text-xs text-slate-500">{alerts.length} item(s)</span>
               </div>
 
-              <div className="space-y-3">
-                {alerts.map((alert, index) => (
-                  <div
-                    key={`${alert.title}-${index}`}
-                    className="rounded-2xl border border-white/5 bg-black/10 p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <h4 className="font-medium text-white">{alert.title}</h4>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClasses[alert.tone]}`}>
-                        {alert.tone.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-400">{alert.meta}</p>
-                  </div>
-                ))}
-              </div>
+              <AlertDetailsPanel
+                alerts={alerts}
+                onAlertClick={(alert) => {
+                  console.log("Alert clicked:", alert);
+                }}
+              />
             </GlassPanel>
           </div>
 
@@ -591,6 +819,22 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Shift Details Drawer */}
+      <AnimatePresence>
+        {expandedShiftId && (
+          <ShiftDetailsDrawer
+            isOpen={true}
+            shiftId={expandedShiftId}
+            data={shiftDetailsData}
+            onClose={() => {
+              setExpandedShiftId(null);
+              setShiftDetailsData(null);
+            }}
+            loading={shiftDetailsLoading}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
