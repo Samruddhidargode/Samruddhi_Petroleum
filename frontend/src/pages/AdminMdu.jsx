@@ -9,6 +9,7 @@ export default function AdminMdu() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    // Load today's MDU trips on first render.
     loadTrips({ date, status });
   }, []);
 
@@ -74,6 +75,7 @@ export default function AdminMdu() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">MDU Management</h1>
 
+        {/* Filters help the admin inspect MDU trips by date and status. */}
         <div className="card mb-4 grid gap-2 md:grid-cols-4">
           <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -89,6 +91,7 @@ export default function AdminMdu() {
 
         {message && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{message}</div>}
 
+        {/* Summary cards aggregate totals from the visible MDU trips. */}
         <div className="mb-6 grid gap-4 md:grid-cols-5">
           <div className="card">
             <div className="text-xs text-slate-500">Total Sales</div>
@@ -112,6 +115,7 @@ export default function AdminMdu() {
           </div>
         </div>
 
+        {/* Table shows each trip with its route, client count, and sales. */}
         <div className="card">
           <h3 className="mb-4 font-semibold text-slate-800">MDU Trips</h3>
           <div className="overflow-x-auto">

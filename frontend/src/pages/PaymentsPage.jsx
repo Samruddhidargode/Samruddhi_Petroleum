@@ -69,6 +69,7 @@ export default function PaymentsPage() {
       return undefined;
     }
 
+    // Convert the file to base64, then upload it so the backend stores a receipt URL.
     const imageData = await readFileAsDataUrl(file);
     const response = await fetch("/api/uploads/receipt", {
       method: "POST",
@@ -115,6 +116,7 @@ export default function PaymentsPage() {
     setMessage("");
 
     try {
+      // Save each payment mode separately so the backend can keep accurate accounting entries.
       if (Number(qrAmount || 0) > 0) {
         const receiptUrl = await uploadReceipt(token, qrReceiptFile, "QR", shiftId);
         await postJson("/api/shifts/qr", token, {
@@ -169,6 +171,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-10 space-y-4">
+      {/* This page collects every non-cash payment before the shift summary screen. */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800">Payment Modes</h2>
         <p className="text-sm text-slate-500 mt-1">Record all non-cash payments</p>
@@ -178,7 +181,7 @@ export default function PaymentsPage() {
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{message}</div>
       )}
 
-      {/* QR Payments */}
+      {/* QR payments are entered first because they are typically a single amount plus receipt. */}
       <div className="card">
         <h3 className="font-semibold text-slate-800 text-lg mb-3">📱 QR / PhonePe Payments</h3>
         <div className="grid gap-3 md:grid-cols-2">
@@ -193,7 +196,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Card Transactions */}
+      {/* Card transactions are grouped so debit and credit entries can be added repeatedly. */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-800 text-lg">💳 Card Transactions</h3>
@@ -223,7 +226,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Fleet Transactions */}
+      {/* Fleet transactions are handled as a separate business channel. */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-800 text-lg">🚗 Fleet Transactions</h3>
@@ -246,7 +249,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Party Credit */}
+      {/* Party credit is tracked with customer name, amount, and receipt. */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-800 text-lg">🏢 Party Credit</h3>
@@ -273,7 +276,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation returns to cash or moves forward to the summary page. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button className="button-outline" onClick={() => navigate("/shift/cash")}>← Back</button>
         <button className="button flex-1 sm:flex-none" onClick={handleNext} disabled={saving}>

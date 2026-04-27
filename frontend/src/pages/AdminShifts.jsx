@@ -20,6 +20,7 @@ export default function AdminShifts() {
   const [listLoading, setListLoading] = useState(false);
 
   useEffect(() => {
+    // Load the first shift list as soon as the admin page opens.
     loadShifts();
   }, []);
 
@@ -118,6 +119,7 @@ export default function AdminShifts() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">Pump Shifts</h1>
 
+        {/* Quick lookup lets the admin open a single DSM sheet by shift id. */}
         <div className="card mb-6">
           <h2 className="mb-3 text-lg font-semibold text-slate-800">Open DSM Sheet</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -133,6 +135,7 @@ export default function AdminShifts() {
           </div>
         </div>
 
+        {/* This table is the searchable register of all pump shifts. */}
         <div className="card">
           <div className="mb-4 grid gap-2 md:grid-cols-5">
             <input
@@ -218,6 +221,7 @@ export default function AdminShifts() {
           </div>
         </div>
 
+        {/* Photo browser helps verify nozzle readings visually. */}
         <div className="card mt-6">
           <h2 className="mb-3 text-lg font-semibold text-slate-800">DSM Sheet Photos</h2>
           <div className="flex flex-wrap items-center gap-2">

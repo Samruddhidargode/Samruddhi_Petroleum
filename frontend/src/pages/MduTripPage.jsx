@@ -87,6 +87,7 @@ export default function MduTripPage() {
     setStarting(true);
     setMessage("");
     try {
+      // Create the trip first so all client rows and closure data attach to one trip id.
       const response = await fetch("/api/mdu/start", {
         method: "POST",
         headers: {
@@ -138,6 +139,7 @@ export default function MduTripPage() {
     setSavingClients(true);
     setMessage("");
     try {
+      // Each valid row is uploaded individually with an optional receipt.
       for (const row of validRows) {
         const receiptUrl = await uploadReceipt(token, row.receiptFile, activeTripId);
         const response = await fetch("/api/mdu/client", {
@@ -188,6 +190,7 @@ export default function MduTripPage() {
     setClosing(true);
     setMessage("");
     try {
+      // Closing the trip finalizes the MDU cycle and clears the active trip id.
       const response = await fetch("/api/mdu/close", {
         method: "POST",
         headers: {
@@ -220,6 +223,7 @@ export default function MduTripPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-10 space-y-4">
+      {/* MDU trip management follows start, client save, and close in one page. */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800">MDU Trip Management</h2>
         <p className="text-sm text-slate-500 mt-1">Track fuel deliveries and manage customer transactions</p>
@@ -231,6 +235,7 @@ export default function MduTripPage() {
         </div>
       )}
 
+      {/* Start Trip section captures opening metadata for the delivery run. */}
       <div className="card">
         <h3 className="text-xl font-bold text-slate-800 mb-1">🚗 Start Trip</h3>
         {activeTripId && <div className="mt-2 text-xs bg-emerald-50 text-emerald-700 p-2 rounded inline-block">Active Trip ID: {activeTripId}</div>}
@@ -258,6 +263,7 @@ export default function MduTripPage() {
         </button>
       </div>
 
+      {/* Client deliveries are recorded row by row with quantity, rate, and payment mode. */}
       <div className="card">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-xl font-bold text-slate-800">👥 Client Deliveries</h3>
@@ -305,6 +311,7 @@ export default function MduTripPage() {
         </button>
       </div>
 
+      {/* Close Trip section stores the end meter/time for the trip. */}
       <div className="card">
         <h3 className="text-xl font-bold text-slate-800 mb-4">⏱️ Close Trip</h3>
         <div className="grid gap-3 md:grid-cols-2">

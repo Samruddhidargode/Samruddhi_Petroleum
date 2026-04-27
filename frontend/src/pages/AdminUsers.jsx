@@ -42,6 +42,7 @@ export default function AdminUsers() {
   }, []);
 
   useEffect(() => {
+    // Reset the form whenever the admin switches between DSM and Manager tabs.
     setFormData({ role: activeTab === "dsm" ? "DSM" : "MANAGER", dsmCode: "", name: "", password: "" });
   }, [activeTab]);
 
@@ -164,6 +165,7 @@ export default function AdminUsers() {
         return;
       }
 
+      // This log helps debug the exact payload sent to the admin user API.
       console.log("Creating user with payload:", {
         role: activeTab === "dsm" ? "DSM" : "MANAGER",
         dsmCode: formData.dsmCode,
@@ -227,6 +229,7 @@ export default function AdminUsers() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">User Management</h1>
 
+        {/* Manager accounts can view the list, but only Admins can modify users. */}
         {!isAdminOnly && (
           <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-700">
             ⚠️ User management is restricted to Admins only. Manager accounts have read-only access.
@@ -239,6 +242,7 @@ export default function AdminUsers() {
           </div>
         )}
 
+        {/* Tabs split DSM and Manager account management into two views. */}
         <div className="card">
           <div className="mb-4 flex gap-2 border-b">
             <button
@@ -263,6 +267,7 @@ export default function AdminUsers() {
             + Add {activeTab === "dsm" ? "DSM" : "Manager"}
           </button>
 
+          {/* Create form appears only when the admin wants to add a new account. */}
           {showCreateForm && (
             <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <h3 className="mb-3 font-semibold">
@@ -310,7 +315,7 @@ export default function AdminUsers() {
             </div>
           )}
 
-          {/* Table */}
+          {/* User table shows active/inactive status and admin actions. */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b bg-slate-100 text-left">

@@ -3,6 +3,7 @@ import StatCard from "../components/StatCard";
 export default function DashboardPage() {
   return (
     <div className="space-y-4">
+      {/* Simple dashboard placeholder showing KPI cards and a shift table scaffold. */}
       <div className="grid gap-3 md:grid-cols-5">
         <StatCard label="Today Sales" value="₹ 0" />
         <StatCard label="Today Collection" value="₹ 0" />
@@ -11,6 +12,7 @@ export default function DashboardPage() {
         <StatCard label="Digital" value="₹ 0" />
       </div>
 
+      {/* The table below is a basic shift list preview for the dashboard area. */}
       <div className="card">
         <h3 className="font-semibold text-slate-800">Shift Table</h3>
         <div className="mt-3 overflow-x-auto">

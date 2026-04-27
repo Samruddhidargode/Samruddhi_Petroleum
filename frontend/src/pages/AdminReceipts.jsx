@@ -18,6 +18,7 @@ export default function AdminReceipts() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    // Auto-load receipt records as soon as the page opens.
     loadReceipts();
   }, []);
 
@@ -69,6 +70,7 @@ export default function AdminReceipts() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">Receipts & Records</h1>
 
+        {/* Filters narrow receipts by date, type, and DSM identity. */}
         <div className="card mb-6 grid gap-2 md:grid-cols-5">
           <input className="input" type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} />
           <input className="input" type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} />
@@ -89,6 +91,7 @@ export default function AdminReceipts() {
 
         {message && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{message}</div>}
 
+        {/* Cards display each receipt preview with its metadata and open link. */}
         <div className="grid gap-4 md:grid-cols-3">
           {!loading && items.length === 0 && (
             <div className="text-sm text-slate-500">No receipts found.</div>

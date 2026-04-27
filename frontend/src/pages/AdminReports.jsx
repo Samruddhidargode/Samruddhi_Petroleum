@@ -27,6 +27,7 @@ export default function AdminReports() {
     setMessage("");
 
     try {
+      // Export endpoints return CSV data that is downloaded as a file in the browser.
       const query = buildQuery(fromDate, toDate);
       const response = await fetch(`/api/reports/export/${kind}${query}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -61,6 +62,7 @@ export default function AdminReports() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">Reports & Excel Export</h1>
 
+        {/* Date filters control the report range before export. */}
         <div className="card mb-4 grid gap-3 md:grid-cols-3">
           <div>
             <label className="text-sm text-slate-600">From Date</label>
@@ -83,6 +85,7 @@ export default function AdminReports() {
           </div>
         )}
 
+        {/* Each card triggers a different CSV export type. */}
         <div className="space-y-4">
           <div className="card">
             <h3 className="mb-3 font-semibold">Export Pump Shifts</h3>

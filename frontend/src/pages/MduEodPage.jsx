@@ -22,6 +22,7 @@ export default function MduEodPage() {
     setLoading(true);
     setMessage("");
     try {
+      // Pull the day summary so the manager can review totals before confirming EOD.
       const response = await fetch(`/api/mdu/summary/${encodeURIComponent(date)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -56,6 +57,7 @@ export default function MduEodPage() {
     setLoading(true);
     setMessage("");
     try {
+      // Submit the final password-protected confirmation to close the MDU day.
       const response = await fetch("/api/mdu/eod", {
         method: "POST",
         headers: {
@@ -95,11 +97,13 @@ export default function MduEodPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+      {/* EOD review is the final MDU checkpoint before daily closure. */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800">MDU End of Day</h2>
         <p className="text-sm text-slate-500 mt-1">Review and confirm daily trip summary</p>
       </div>
 
+      {/* Date picker controls which day summary is loaded. */}
       <div className="card">
         <label className="block text-sm font-medium text-slate-700 mb-2">📅 Select Date</label>
         <input className="input" type="date" value={eodDate} onChange={(e) => setEodDate(e.target.value)} />
@@ -111,6 +115,7 @@ export default function MduEodPage() {
         </div>
       )}
 
+      {/* Summary cards show trips, sales, and payment split for the selected date. */}
       <div className="card">
         <h3 className="text-lg font-bold text-slate-800 mb-4">📊 Daily Summary</h3>
         
@@ -158,6 +163,7 @@ export default function MduEodPage() {
         </div>
       </div>
 
+      {/* Final confirmation requires a checkbox and password before the day is locked. */}
       <div className="card">
         <h3 className="text-lg font-bold text-slate-800 mb-4">✓ Final Confirmation</h3>
         

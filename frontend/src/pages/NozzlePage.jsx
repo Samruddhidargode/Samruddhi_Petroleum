@@ -32,6 +32,7 @@ export default function NozzlePage() {
   const [autoSaving, setAutoSaving] = useState(false);
 
   useEffect(() => {
+    // Load any locally saved nozzle draft when the page opens.
     const saved = localStorage.getItem("shiftNozzleDraft");
     if (saved) {
       try {
@@ -53,6 +54,7 @@ export default function NozzlePage() {
   }, []);
 
   useEffect(() => {
+    // Keep a sanitized copy in localStorage so the page can recover after refresh.
     try {
       const sanitized = points.map((p) => ({
         ...p,
@@ -68,6 +70,7 @@ export default function NozzlePage() {
   }, [points]);
 
   useEffect(() => {
+    // Pull server-side draft data when an active shift exists.
     const shiftId = localStorage.getItem("activeShiftId");
     if (!shiftId) return;
     loadDraftFromServer(shiftId);
@@ -76,6 +79,7 @@ export default function NozzlePage() {
   async function loadDraftFromServer(shiftId) {
     try {
       const token = localStorage.getItem("token");
+      // Read saved nozzle entries for this shift and rebuild the point/fuel matrix.
       const response = await fetch(`/api/shifts/draft/${shiftId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -110,6 +114,7 @@ export default function NozzlePage() {
   }
 
   const runningSales = useMemo(() => {
+    // Calculate the running sales total from all points and both fuel types.
     return points.reduce((sum, point) => {
       return sum + FUEL_TYPES.reduce((fuelSum, fuel) => {
         const row = point.fuels[fuel];
@@ -159,6 +164,7 @@ export default function NozzlePage() {
       if (!result) return;
       try {
         const token = localStorage.getItem("token");
+        // Upload the captured photo and store the returned URL in the row.
         const response = await fetch("/api/uploads/nozzle-photo", {
           method: "POST",
           headers: {
@@ -298,6 +304,7 @@ export default function NozzlePage() {
     }
 
     const entries = [];
+    // Convert the editable grid into API-ready nozzle entry rows.
     for (const point of points) {
       for (const fuel of FUEL_TYPES) {
         const row = point.fuels[fuel];
@@ -356,6 +363,7 @@ export default function NozzlePage() {
   }
 
   useEffect(() => {
+    // Auto-save a draft shortly after the user changes nozzle values.
     const shiftId = localStorage.getItem("activeShiftId");
     if (!shiftId) return;
     if (!points.some((p) => pointHasAnyData(p))) return;
@@ -373,6 +381,7 @@ export default function NozzlePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 pb-10 space-y-4">
+      {/* Header shows the active shift and the live running sales total. */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm font-medium text-slate-600">Shift {shiftNumber} | Running Sales: ₹ {formatNumber(runningSales)}</div>
         <button className="button-outline" onClick={addPoint}>+ Add Point</button>
@@ -411,6 +420,7 @@ export default function NozzlePage() {
               </button>
             </div>
 
+            {/* Wide table keeps HSD and MS rows side by side for easy comparison. */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-100 text-left">
@@ -517,6 +527,7 @@ export default function NozzlePage() {
         Total Sales (All Points): ₹ {formatNumber(runningSales)}
       </div>
 
+      {/* Navigation moves the DSM from nozzle entry to cash collection. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           <button className="button-outline" onClick={() => navigate("/shift/start")}>← Back</button>

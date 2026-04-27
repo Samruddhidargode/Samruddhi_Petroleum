@@ -7,6 +7,7 @@ export default function AdminSettings() {
       <main className="flex-1 p-6">
         <h1 className="mb-6 text-3xl font-bold text-slate-800">Settings</h1>
 
+        {/* This page is a static reference area for configuration and system status. */}
         <div className="space-y-4">
           <div className="card">
             <h3 className="mb-3 font-semibold">Pump Configuration</h3>

@@ -19,6 +19,7 @@ export default function SummaryPage() {
       }
 
       try {
+        // Reload the saved draft so this screen can compare sales and collections.
         const response = await fetch(`/api/shifts/draft/${shiftId}`, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -43,6 +44,7 @@ export default function SummaryPage() {
   }, []);
 
   const totals = useMemo(() => {
+    // Build the reconciliation numbers from all payment buckets.
     const shift = summary || {};
     const cashFromDrops = (shift.cashDrops || []).reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
     const qr = (shift.qrEntries || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -71,6 +73,7 @@ export default function SummaryPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+      {/* Summary is the review step before the final confirmation screen. */}
       <div className="card">
         <h2 className="text-2xl font-bold text-slate-800 mb-1">Shift Summary</h2>
         <p className="text-sm text-slate-500 mb-4">Review your sales and collection data before final submission</p>
@@ -82,7 +85,7 @@ export default function SummaryPage() {
         )}
         
         <div className="space-y-3">
-          {/* Sales Section */}
+          {/* Sales section shows the booked revenue side of the reconciliation. */}
           <div className="p-4 bg-slate-50 rounded-lg border-l-4 border-blue-500">
             <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">💰 Sales</p>
             <div className="flex justify-between items-center">
@@ -91,7 +94,7 @@ export default function SummaryPage() {
             </div>
           </div>
           
-          {/* Collections Section */}
+          {/* Collections section groups every payment mode collected during the shift. */}
           <div className="p-4 bg-slate-50 rounded-lg border-l-4 border-green-500 space-y-2">
             <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3">📊 Collections Breakdown</p>
             <div className="flex justify-between text-sm"><span className="text-slate-600">Cash from Drops</span><span className="font-medium">{formatInr(totals.cashFromDrops)}</span></div>
@@ -105,7 +108,7 @@ export default function SummaryPage() {
             </div>
           </div>
           
-          {/* Difference Section */}
+          {/* Difference section highlights whether collections match sales. */}
           <div className={`p-4 rounded-lg border-l-4 ${isBalanced ? "bg-emerald-50 border-emerald-500" : "bg-rose-50 border-rose-500"}`}>
             <p className="text-xs uppercase tracking-widest font-semibold mb-2" style={{color: isBalanced ? '#059669' : '#dc2626'}}>
               {isBalanced ? '✓ Balance' : '⚠ Difference'}
@@ -125,6 +128,7 @@ export default function SummaryPage() {
         </div>
       </div>
       
+      {/* Navigation lets the DSM go back or continue to final confirmation. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button className="button-outline" onClick={() => navigate("/shift/payments")}>← Back</button>
         <button className="button flex-1 sm:flex-none" onClick={() => navigate("/shift/confirm")}>Next → Confirm</button>

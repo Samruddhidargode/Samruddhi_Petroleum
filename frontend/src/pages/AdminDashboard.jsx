@@ -212,6 +212,7 @@ export default function AdminDashboard() {
   const [shiftDetailsLoading, setShiftDetailsLoading] = useState(false);
 
   useEffect(() => {
+    // Initial load pulls the dashboard analytics for the selected date range.
     loadDashboard();
   }, [fromDate, toDate, compareMode]);
 
@@ -431,6 +432,7 @@ export default function AdminDashboard() {
   );
 
   const comparisonChartData = useMemo(() => {
+    // Build the 7-day trend chart from the sparkline data returned by the API.
     const sparklines = data?.sparklines;
     if (!sparklines?.totalSales || !sparklines?.totalCollected) {
       return null;
@@ -465,6 +467,7 @@ export default function AdminDashboard() {
   }, [data?.sparklines]);
 
   const alerts = useMemo(() => {
+    // Alerts summarize anything that needs the admin's attention.
     const list = [];
 
     if (Number(kpis.pendingSubmissions || 0) > 0) {
@@ -520,6 +523,7 @@ export default function AdminDashboard() {
 
       <main className="relative flex-1 overflow-auto">
         <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+          {/* Hero section explains the current dashboard context and date range. */}
           <motion.div
             className="mb-6 overflow-hidden rounded-[28px] border border-blue-200 bg-white p-6 shadow-md"
             initial={{ opacity: 0, y: -24 }}
@@ -590,6 +594,7 @@ export default function AdminDashboard() {
             initial="hidden"
             animate="visible"
           >
+            {/* KPI cards show the most important station numbers at a glance. */}
             {primaryMetrics.map((metric) => (
               <motion.div key={metric.label} variants={itemVariants}>
                 <MetricCard {...metric} />
@@ -603,6 +608,7 @@ export default function AdminDashboard() {
             initial="hidden"
             animate="visible"
           >
+            {/* Secondary cards split cash, digital, and business-account totals. */}
             {secondaryMetrics.map((metric, index) => {
               const bgColor = palette[(index + 2) % palette.length];
               const bgClass = 
@@ -633,6 +639,7 @@ export default function AdminDashboard() {
           </motion.div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+            {/* Horizontal bar cards compare shift sales and point-wise sales. */}
             <HorizontalBars
               title="Sales by Shift"
               rows={salesByShiftRows}
@@ -649,6 +656,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+            {/* Pie charts show how revenue is distributed across payment and fuel types. */}
             <GlassPanel className="p-6">
               <div className="mb-5">
                 <h3 className="text-lg font-semibold text-slate-900">Payment Mix</h3>
@@ -693,6 +701,7 @@ export default function AdminDashboard() {
           {/* Comparison and Trend Analysis */}
           {comparisonChartData && (
             <div className="mt-6">
+              {/* This panel contains the 7-day line chart comparison. */}
               <GlassPanel className="mx-auto w-full max-w-5xl p-5">
                 <div className="mb-5">
                   <h3 className="text-lg font-semibold text-slate-900">7-Day Trend Comparison</h3>
@@ -709,6 +718,7 @@ export default function AdminDashboard() {
 
           {/* Heatmap and Waterfall Charts */}
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+            {/* Heatmap and waterfall help spot nozzle and reconciliation patterns. */}
             <GlassPanel className="p-6">
               <div className="mb-5">
                 <h3 className="text-lg font-semibold text-slate-900">Nozzle × Shift Heatmap</h3>
@@ -743,6 +753,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+            {/* Operations snapshot and alerts are the executive summary of the dashboard. */}
             <GlassPanel className="p-6">
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">Operations Snapshot</h3>

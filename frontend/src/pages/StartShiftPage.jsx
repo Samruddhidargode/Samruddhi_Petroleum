@@ -12,6 +12,7 @@ export default function StartShiftPage() {
   const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
+    // Restore any saved draft so the DSM can continue after refresh.
     const draft = localStorage.getItem("shiftStartDraft");
     if (draft) {
       try {
@@ -30,6 +31,7 @@ export default function StartShiftPage() {
   }, []);
 
   async function handleStartShift() {
+    // Prevent duplicate shift creation if a shift is already active.
     const existingShift = localStorage.getItem("activeShiftId");
     if (existingShift) {
       navigate("/shift/nozzle");
@@ -51,6 +53,7 @@ export default function StartShiftPage() {
     setMessage("");
 
     try {
+      // Create the shift on the backend and store the returned shift id locally.
       const response = await fetch("/api/shifts/create", {
         method: "POST",
         headers: {
@@ -85,6 +88,7 @@ export default function StartShiftPage() {
   }
 
   async function handleSaveDraft() {
+    // Draft saving uses the same API so the shift data exists on the server early.
     if (!shiftDate || !timeIn) {
       setMessage("Please enter Date In and Time In");
       return;
@@ -146,6 +150,7 @@ export default function StartShiftPage() {
         )}
         
         <div className="space-y-4">
+          {/* Basic shift metadata is collected before nozzle entry begins. */}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Date In</label>
@@ -169,6 +174,7 @@ export default function StartShiftPage() {
             </div>
           </div>
           
+          {/* Start shift saves and moves to nozzle capture; draft keeps work in progress. */}
           <div className="flex flex-col gap-3 sm:flex-row">
             <button className="button flex-1" onClick={handleStartShift} disabled={loading}>
               {loading ? "Starting..." : "▶️ Start Shift"}

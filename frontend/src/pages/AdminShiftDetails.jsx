@@ -23,6 +23,7 @@ export default function AdminShiftDetails() {
   useEffect(() => {
     if (id) {
       setShiftId(id);
+      // Auto-load the requested shift when opened from the shift list.
       loadShift(id);
     }
   }, [id]);
@@ -37,6 +38,7 @@ export default function AdminShiftDetails() {
     setLoading(true);
     setMessage("");
     try {
+      // Fetch the full DSM sheet plus all nozzle photos for this shift.
       const response = await fetch(`/api/shifts/${shiftIdToLoad}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -103,6 +105,7 @@ export default function AdminShiftDetails() {
     setSaving(true);
     setMessage("");
     try {
+      // Admin edits are saved back through the same nozzle-draft endpoint.
       const response = await fetch("/api/shifts/nozzle-draft", {
         method: "POST",
         headers: {
@@ -134,6 +137,7 @@ export default function AdminShiftDetails() {
           <button className="button-outline" onClick={() => navigate("/admin/shifts")}>← Back to Shifts</button>
         </div>
 
+        {/* Search bar lets the admin load any DSM sheet directly. */}
         <div className="card mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -158,6 +162,7 @@ export default function AdminShiftDetails() {
           )}
         </div>
 
+        {/* Shift metadata gives the quick header summary for the selected sheet. */}
         {shift && (
           <div className="card mb-4">
             <div className="grid gap-2 text-sm">
@@ -169,6 +174,7 @@ export default function AdminShiftDetails() {
           </div>
         )}
 
+        {/* Each point is rendered as a separate table so the HSD/MS readings stay clear. */}
         {shift && grouped.map((point) => (
           <div key={point.pointNo} className="card mb-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-700">Point {point.pointNo}</h2>

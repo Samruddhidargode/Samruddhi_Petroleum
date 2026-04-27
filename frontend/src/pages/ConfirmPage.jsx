@@ -30,6 +30,7 @@ export default function ConfirmPage() {
     setMessage("");
 
     try {
+      // Final submit locks the shift and sends the confirmation password to the backend.
       const response = await fetch("/api/shifts/submit", {
         method: "POST",
         headers: {
@@ -64,6 +65,7 @@ export default function ConfirmPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+      {/* This is the final gate before the shift is permanently submitted. */}
       <div className="card">
         <h2 className="text-2xl font-bold text-slate-800 mb-1">Final Confirmation</h2>
         <p className="text-sm text-slate-500 mb-4">Verify and submit your shift</p>
@@ -75,7 +77,7 @@ export default function ConfirmPage() {
         )}
         
         <div className="space-y-4">
-          {/* Confirmation Checkbox */}
+          {/* The checkbox forces the user to explicitly confirm the data is correct. */}
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <label className="flex items-start gap-3 cursor-pointer">
               <input 
@@ -93,7 +95,7 @@ export default function ConfirmPage() {
             </label>
           </div>
           
-          {/* Password Verification */}
+          {/* Password re-entry provides a second layer of user verification. */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">🔐 Re-enter Password</label>
             <input 
@@ -106,7 +108,7 @@ export default function ConfirmPage() {
             <p className="text-xs text-slate-500 mt-1">This verifies your identity for security</p>
           </div>
           
-          {/* Warning Box */}
+          {/* Warning box reminds the user that submission is irreversible. */}
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm font-medium text-amber-900">⚠️ Important</p>
             <p className="text-xs text-amber-700 mt-1">
@@ -116,6 +118,7 @@ export default function ConfirmPage() {
         </div>
       </div>
       
+      {/* Navigation goes back to summary or submits the completed shift. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button className="button-outline" onClick={() => navigate("/shift/summary")}>← Back</button>
         <button 

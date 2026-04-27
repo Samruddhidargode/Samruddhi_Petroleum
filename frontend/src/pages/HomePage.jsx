@@ -5,7 +5,7 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to appropriate page
+    // If the user already has a session, send them to the correct dashboard.
     const token = localStorage.getItem("token");
     const userRole = localStorage.getItem("userRole");
     if (token && userRole) {
@@ -46,6 +46,7 @@ export default function HomePage() {
 
         {/* Role Selection - Horizontal Bottom/Center */}
         <div className="w-full max-w-4xl space-y-4 md:space-y-0">
+          {/* Role buttons open the login page with a role query string. */}
           <p className="mb-6 text-center text-lg font-semibold text-white drop-shadow-md">
             Select Your Role to Continue
           </p>

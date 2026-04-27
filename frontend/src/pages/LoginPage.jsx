@@ -6,6 +6,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // Read role from the URL so one login screen can serve DSM, Manager, and Admin.
   const [role, setRole] = useState(searchParams.get("role") || "DSM");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +35,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Send credentials to the auth API and wait for a token/user response.
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,9 +52,11 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
+      // Keep the session in localStorage so later pages can reuse the token.
       localStorage.setItem("token", data.token);
       localStorage.setItem("userRole", data.user.role);
 
+      // Route users to the correct first page after login.
       if (data.user.role === "ADMIN" || data.user.role === "MANAGER") {
         navigate("/admin/dashboard");
       } else {
@@ -77,14 +81,14 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Role Badge */}
+          {/* This badge confirms which role is being authenticated. */}
           <div className={`mb-6 inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r ${roleColors[role]} px-4 py-2 font-semibold text-white shadow-lg`}>
             {role === "DSM" && "🚚 DSM - Delivery Staff"}
             {role === "MANAGER" && "👤 Manager - Verify & Monitor"}
             {role === "ADMIN" && "⚙️ Admin - System Control"}
           </div>
 
-          {/* Form */}
+          {/* Login form sends username, password, and role together. */}
           <form className="space-y-4" onSubmit={handleLogin}>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -132,7 +136,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Back Button */}
+          {/* Back button returns to the role selection screen. */}
           <button
             type="button"
             onClick={() => navigate("/")}

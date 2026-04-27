@@ -20,6 +20,7 @@ export default function CashDropPage() {
   }
 
   const calculateDropTotal = (drop) => {
+    // Multiply each denomination by its face value to get the cash drop total.
     const den500 = Number(drop.den500 || 0);
     const den200 = Number(drop.den200 || 0);
     const den100 = Number(drop.den100 || 0);
@@ -56,6 +57,7 @@ export default function CashDropPage() {
 
     try {
       for (const drop of drops) {
+        // Skip completely empty rows so the backend only receives real cash drops.
         const normalized = {
           den500: Number(drop.den500 || 0),
           den200: Number(drop.den200 || 0),
@@ -108,6 +110,7 @@ export default function CashDropPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 space-y-4">
+      {/* Top summary shows the grand cash total before moving to payments. */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Cash Drops</h2>
